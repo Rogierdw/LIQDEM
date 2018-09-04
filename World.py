@@ -41,15 +41,15 @@ def landscape(size, min, max, SF):
                 i = j
         return subj
 
-def create_agents(world, heur_size = 3, heur_or = 12):
-    amount = int(np.math.factorial(heur_or) / np.math.factorial(heur_or - heur_size))
+def create_agents(world, heur_size = 3, heur_max = 12):
+    amount = int(np.math.factorial(heur_max) / np.math.factorial(heur_max - heur_size))
     print('num.Agents = ' + str(amount))
     agents = []
     id = 1
     while id <= amount:
-        for i in range(1, heur_or + 1):
-            for j in range(1, heur_or + 1):
-                for k in range(1, heur_or + 1):
+        for i in range(1, heur_max + 1):
+            for j in range(1, heur_max + 1):
+                for k in range(1, heur_max + 1):
                     if i != j and i != k and j !=k:
                         agents.append(Agent(id, (i, j, k), world))
                         id += 1
