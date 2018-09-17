@@ -41,7 +41,7 @@ def landscape(size, min, max, SF):
                 i = j
         return subj
 
-def create_agents(world, heur_size = 3, heur_max = 12):
+def create_agents(world, net_type, heur_size = 3, heur_max = 12):
     amount = int(np.math.factorial(heur_max) / np.math.factorial(heur_max - heur_size))
     print('num.Agents = ' + str(amount))
     agents = []
@@ -53,19 +53,25 @@ def create_agents(world, heur_size = 3, heur_max = 12):
                     if i != j and i != k and j !=k:
                         agents.append(Agent(id, (i, j, k), world))
                         id += 1
+
+    # Agent network creation
+    for agent in agents:
+        agent.links = agent.create_links(amount, net_type)
+
     return agents
 
 class World():
-    def __init__(self, subjects, size, min, max, smoothing):
+    def __init__(self, subjects, size, min, max, smoothing, net_type):
         self.world = [landscape(size,min,max,smoothing) for _ in range(subjects)]
-        self.agents = create_agents(self.world)
+        self.agents = create_agents(self.world, net_type)
 
-
-        #DIRECT DEMOCRACY!!!
-        print("DIRECT DEMOCRACY")
         x = [agent.ability for agent in self.agents]
 
+        #DIRECT DEMOCRACY!!!
+        print("\nDIRECT DEMOCRACY")
         print(np.mean(x,0))
+
+        print('\n Network type = ' + net_type)
 
         ## HERE COME THE DEMOCRACIES ##
 

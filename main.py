@@ -1,8 +1,8 @@
 import sys
 from World import World
 
-def main(subjects = 3, size = 2000, min = 1, max = 100, smoothing = 3):
-    output = World(subjects, size, min, max, smoothing)
+def main(subjects = 1, size = 2000, min = 1, max = 100, smoothing = 3, net_type = 'small'):
+    output = World(subjects, size, min, max, smoothing, net_type)
     #print(output.world)
 
 
