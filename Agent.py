@@ -16,7 +16,6 @@ def agent_search(heuristic, landscape, idx, val):
     return(val)
 
 
-
 class Agent():
     def __init__(self, id,  heuristic, world):
         self.id = id
@@ -28,35 +27,47 @@ class Agent():
                 ab_id[id] = agent_search(heuristic, landscape, id, landscape[id])
             self.ability[i] = np.mean(ab_id)
             i += 1
+        #print(self.id)
         #print(self.ability)
 
 
-
-    def create_links(self, amount, net_type, edges = 8):
-        links = []
+    def create_links(self, amount, net_type, edges = 42):
+        ### LIQUID VERSION
+        self.links = []
         #p = 1/(amount^2)
         #p = 1 / amount
-        p = 0.1
+        p = 0.15
 
         if net_type == 'fully':
-            links = range(1, amount + 1)
+            self.links = range(1, amount + 1)
 
         if net_type == 'random':
+            self.links.append(self.id)
+            i = 0
+            while i < edges:
+                new = randint(1,amount)
+                if new not in self.links:
+                    self.links.append(new)
+                    i += 1
+            '''
+            OLD RANDOM BLOCK
             for id in range(1, amount + 1):
                 if id==self.id:
-                    links.append(id)
+                    self.links.append(id)
                 else:
+                    
                     if p >= random():
-                        links.append(id)
+                        self.links.append(id)
+            '''
 
         if net_type == 'regular':
             id = self.id + amount
             lis = range(id - int(edges/2), id + int(edges/2) + 1)
             for it in lis:
                 if it%amount == 0:
-                    links.append(amount)
+                    self.links.append(amount)
                 else:
-                    links.append(it%amount)
+                    self.links.append(it%amount)
 
         if net_type == 'small':
             holder = []
@@ -65,18 +76,23 @@ class Agent():
             for it in lis:
                 if it % amount == 0:
                     holder.append(amount)
+                elif it % amount == self.id:
+                    continue
                 else:
                     holder.append(it % amount)
 
             for item in holder:
                 if p >= random():
                     new = randint(1,amount)
-                    if new not in holder and new not in links:
-                        links.append(new)
+                    if new not in holder and new not in self.links and new != self.id:
+                        self.links.append(new)
                     else:
-                        links.append(item)
+                        self.links.append(item)
                 else:
-                    links.append(item)
+                    self.links.append(item)
+            self.links.append(self.id)
 
-        #print(links)
-        return links
+        if net_type == 'power':
+            self.links = [self.id]
+
+        #print(self.links)
