@@ -31,7 +31,7 @@ class Agent():
         #print(self.ability)
 
 
-    def create_links(self, amount, net_type, edges = 42):
+    def create_links(self, amount, net_type, edges = 21):
         ### LIQUID VERSION
         self.links = []
         #p = 1/(amount^2)
@@ -91,8 +91,5 @@ class Agent():
                 else:
                     self.links.append(item)
             self.links.append(self.id)
-
-        if net_type == 'power':
-            self.links = [self.id]
 
         #print(self.links)

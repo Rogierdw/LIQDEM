@@ -1,7 +1,8 @@
-from random import randint
+from random import randint, random
 from math import floor,ceil
 from Agent import Agent
 import numpy as np
+import itertools
 
 def landscape(size, min, max, SF):
     if SF == 0:
@@ -107,8 +108,11 @@ class World():
 
     def create_network(self, net_type):
         # Agent network creation LIQUID VERSION
-        for agent in self.agents:
-            agent.create_links(self.amount, net_type)
+        if net_type=='power':
+            self.create_power_network(1) ## MAGIC NUMBER!
+        else:
+            for agent in self.agents:
+                agent.create_links(self.amount, net_type)
 
     def search_best_links(self):
         ### LIQUID VERSION, searches agent.links
@@ -122,57 +126,31 @@ class World():
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
             #print(agent.best_links)
 
+    def create_power_network(self, start_m):
+        x = 0
+        lis = []
+        network = []
+        for agent in self.agents:
+            if x < start_m:
+                lis.append(agent.id)
+            if x == start_m:
+                for i in range(start_m):
+                    network.append(lis[i:start_m]+lis[0:i])
+            if x >= start_m:
+                # m_0 is set up, now for the real deal
+                Success = False
+                while not Success:
+                    i = randint(0,len(network)-1)
+                    k_i = len(network[i])
+                    k_tot = len(list(itertools.chain.from_iterable(network)))
+                    p = k_i / k_tot
+                    if p > random():
+                        Success = True
+                        network[i].extend([agent.id])
+                        network.append([agent.id, i])
+            x+=1
 
-
-
-
-
-
-'''
-class AggressionModel(Model):
-    """A model simulating aggression and the onset of riots in crowd behavior."""
-    def __init__(self, N_fan, N_hool, N_pol, N_riopol, width = 100, height = 100, twogroup_switch = False, group_a_proportion = 0.25, riot_police_grouped = False, size_riot_police_groups = 5):
-        self.running = True # enables conditional shut off of the model (is now set True indefinitely)
-        self.num_non_police = N_fan + N_hool
-        self.num_agents = N_fan + N_hool + N_pol + N_riopol
-        self.grid = SingleGrid(width, height, True) # Boolean is for wrap-around, SingleGrid enforces one agent/cell
-        self.schedule = RandomActivation(self) # Means agent activation ordering is random
-        self.size_riot_groups = size_riot_police_groups  # Initial size of riot police groups
-
-        if twogroup_switch:
-            # Create agents
-            fan_a = int(N_fan * group_a_proportion)
-            hool_a = int(N_hool * group_a_proportion)
-            for i in range(self.num_agents):
-                if i < fan_a:
-                    a = Fan(i, self, True) # True and False are the party
-                elif i < N_fan:
-                    a = Fan(i, self, False)
-                elif i < N_fan + hool_a:
-                    a = Hooligan(i, self, True)
-                elif i < N_fan + N_hool:
-                    a = Hooligan(i, self, False)
-                elif i < N_fan + N_hool + N_pol:
-                    a = Police(i, self, None)
-                else:
-                    a = Riot_Police(i, self, None)
-                self.schedule.add(a)
-                self.place_agent(a, riot_police_grouped)
-        else:
-            for i in range(self.num_agents):
-                if i < N_fan:
-                    a = Fan(i, self, True)
-                elif i < N_fan+N_hool:
-                    a = Hooligan(i, self, True)
-                elif i < N_fan+N_hool+N_pol:
-                    a = Police(i, self, False)
-                else:
-                    a = Riot_Police(i, self, False)
-                self.schedule.add(a)
-                self.place_agent(a, riot_police_grouped)
-
-        self.datacollector = DataCollector(
-            model_reporters={"Aggression": mean_aggression,
-                             "Attacks": compute_attacks,
-                             "Police Interuptions": police_interutions})
-'''
+        x = 0
+        for agent in self.agents:
+            agent.links = network[x]
+            x+=1

@@ -1,14 +1,18 @@
 import sys
 from World import World
 
-def main(subjects = 2, size = 2000, min = 1, max = 100, smoothing = 3):
+def main(subjects = 2, size = 1000, min = 1, max = 100, smoothing = 3):
     world = World(subjects, size, min, max, smoothing)
-    # print(output.world)
+    # print(world.world)
+
     world.direct()
-    #output.liquid('fully')
+
+    #world.liquid('fully')
+
     world.liquid('random')
     world.liquid('regular')
     world.liquid('small')
+    world.liquid('power')
 
 
 
