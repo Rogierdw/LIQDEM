@@ -31,7 +31,7 @@ class Agent():
         #print(self.ability)
 
 
-    def create_links(self, amount, net_type, edges = 21):
+    def create_links(self, amount, net_type, edges = 20):
         ### LIQUID VERSION
         self.links = []
         #p = 1/(amount^2)

@@ -61,9 +61,14 @@ def create_agents(world, heur_size = 3, heur_max = 12):
 
 
 class World():
-    def __init__(self, subjects, size, min, max, smoothing):
+    def __init__(self, subjects, size, min, max):
         self.subjects = subjects
-        self.world = [landscape(size,min,max,smoothing) for _ in range(subjects)]
+        #OLD, SET SMOOTHING
+        #self.world = [landscape(size,min,max,SF=3) for _ in range(subjects)]
+        #NEW, Ramping smoothing
+        self.world = []
+        for SF in range(subjects):
+            self.world.append(landscape(size=size, min=min, max=max, SF=SF))
         self.agents, self.amount = create_agents(self.world)
 
     def direct(self):
