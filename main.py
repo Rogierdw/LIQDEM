@@ -21,7 +21,7 @@ def main(subjects = 5, size = 1000, min = 1, max = 100, degree = 20):
     world.direct()
     world.representative(degree)
 
-    #world.liquid('fully')
+    world.liquid('fully')
 
     world.liquid('random', degree)
     world.liquid('regular', degree)

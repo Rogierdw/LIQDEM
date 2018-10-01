@@ -19,6 +19,7 @@ def agent_search(heuristic, landscape, idx, val):
 class Agent():
     def __init__(self, id,  heuristic, world):
         self.id = id
+        self.links = []
         i = 0
         self.ability = np.zeros(len(world))
         for landscape in world:
@@ -30,8 +31,15 @@ class Agent():
         #print(self.id)
         #print(self.ability)
 
+    def add_link(self, x):
+        self.links.append(x)
 
+    def clear_links(self):
+        self.links = []
+
+'''
     def create_links(self, amount, net_type, degree = 20):
+        ##DEPRECATED, USE create_network in WORLD.PY
         ### LIQUID VERSION
         self.links = []
         #p = 1/(amount^2)
@@ -49,7 +57,7 @@ class Agent():
                 elif p >= random():
                     self.links.append(id)
 
-            '''
+            
             OLD RANDOM BLOCK 2
             i = 0
             while i < degree:
@@ -66,7 +74,7 @@ class Agent():
                     
                     if p >= random():
                         self.links.append(id)
-            '''
+            
 
         if net_type == 'regular':
             self.links.append(self.id)
@@ -112,6 +120,5 @@ class Agent():
                         self.links.append(item)
                 else:
                     self.links.append(item)
-
-
         #print(self.links)
+'''

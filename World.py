@@ -3,6 +3,7 @@ from math import floor,ceil
 from Agent import Agent
 import numpy as np
 import itertools
+import networkx as nx
 
 def landscape(size, min, max, SF):
     if SF == 0:
@@ -46,7 +47,7 @@ def create_agents(world, heur_size = 3, heur_max = 12):
     amount = int(np.math.factorial(heur_max) / np.math.factorial(heur_max - heur_size))
     print('num.Agents = ' + str(amount))
     agents = []
-    id_list = np.random.permutation(range(1,amount+1))
+    id_list = np.random.permutation(range(0,amount))
     id = 0
     while id < amount:
         for i in range(1, heur_max + 1):
@@ -104,12 +105,11 @@ class World():
                 ac_list.append(agent.ability)
         print(np.mean(ac_list,0))
 
-    def liquid(self, net_type, degree):
+    def liquid(self, net_type, degree=20):
         print('\nLIQUID DEMOCRACY')
         print('Network type = ' + net_type)
         self.create_network(net_type, degree)
-        print('Average outdegree: ' + str(np.mean([len(agent.links) for agent in self.agents])))
-        #print('Average intdegree: ' + str(np.mean([len(agent.inlinks) for agent in self.agents])))
+        print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents]))-1)
 
         ## Each agent determines links with highest ability (best_links)
         self.search_best_links()
@@ -141,12 +141,59 @@ class World():
         print(b)
 
     def create_network(self, net_type, degree):
-        # Agent network creation LIQUID VERSION
+        #print('NetworkX creating network')
+        if net_type == 'fully':
+            G = nx.complete_graph(self.amount)
+
+        if net_type == 'random':
+            G = nx.fast_gnp_random_graph(self.amount, degree/self.amount)
+            while not nx.is_connected(G):
+                G = nx.fast_gnp_random_graph(self.amount, degree / self.amount)
+
+        if net_type == 'regular':
+            G = nx.random_regular_graph(degree, self.amount)
+            while not nx.is_connected(G):
+                G = nx.random_regular_graph(degree, self.amount)
+
+        if net_type == 'ring':
+            G = nx.connected_watts_strogatz_graph(n=self.amount, k=degree, p=0)
+            while not nx.is_connected(G):
+                G = nx.connected_watts_strogatz_graph(n=self.amount, k=degree, p=0)
+
+        if net_type == 'small':
+            G = nx.connected_watts_strogatz_graph(n=self.amount, k=degree, p=0.25)
+            while not nx.is_connected(G):
+                G = nx.connected_watts_strogatz_graph(n=self.amount, k=degree, p=0.25)
+
+        if net_type == 'scale free':
+            G = nx.barabasi_albert_graph(n=self.amount, m=int(degree/2))
+            while not nx.is_connected(G):
+                G = nx.barabasi_albert_graph(n=self.amount, m=int(degree / 2))
+
+        print('number of nodes: '+str(G.number_of_nodes()))
+        print('number of edges: '+str(G.number_of_edges()))
+        self.from_graph_to_links(G.edges())
+
+
+        '''
+        # Agent network creation LIQUID OWN VERSION, DEPRECATED
         if net_type=='scale free':
             self.create_scale_free_network(int(degree/2))
         else:
             for agent in self.agents:
                 agent.create_links(self.amount, net_type, degree)
+        '''
+
+    def from_graph_to_links(self, edges):
+        for agent in self.agents:
+            agent.clear_links()
+            for edge in edges:
+                if agent.id in edge:
+                    if edge[0] not in agent.links:
+                        agent.add_link(edge[0])
+                    if edge[1] not in agent.links:
+                        agent.add_link(edge[1])
+
 
     def search_best_links(self):
         ### LIQUID VERSION, searches agent.links
@@ -160,7 +207,9 @@ class World():
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
             #print(agent.best_links)
 
+'''
     def create_scale_free_network(self, m0):
+        ###DERECATED, use G = nx.barabasi_albert_graph() instead
         x = 0
         lis = []
         network = []
@@ -195,3 +244,5 @@ class World():
         for agent in self.agents:
             agent.links = network[x]
             x+=1
+
+'''
