@@ -77,10 +77,12 @@ class World():
         a = [agent.ability for agent in self.agents]
         print(np.mean(a,0))
 
-    def liquid(self, net_type):
+    def liquid(self, net_type, degree):
         print('\nLIQUID DEMOCRACY')
         print('Network type = ' + net_type)
-        self.create_network(net_type)
+        self.create_network(net_type, degree)
+        print('Average outdegree: ' + str(np.mean([len(agent.links) for agent in self.agents])))
+        #print('Average intdegree: ' + str(np.mean([len(agent.inlinks) for agent in self.agents])))
 
         ## Each agent determines links with highest ability (best_links)
         self.search_best_links()
@@ -111,13 +113,13 @@ class World():
 
         print(b)
 
-    def create_network(self, net_type):
+    def create_network(self, net_type, degree):
         # Agent network creation LIQUID VERSION
-        if net_type=='power':
-            self.create_power_network(1) ## MAGIC NUMBER!
+        if net_type=='scale free':
+            self.create_scale_free_network(int(degree/2))
         else:
             for agent in self.agents:
-                agent.create_links(self.amount, net_type)
+                agent.create_links(self.amount, net_type, degree)
 
     def search_best_links(self):
         ### LIQUID VERSION, searches agent.links
@@ -131,28 +133,35 @@ class World():
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
             #print(agent.best_links)
 
-    def create_power_network(self, start_m):
+    def create_scale_free_network(self, m0):
         x = 0
         lis = []
         network = []
         for agent in self.agents:
-            if x < start_m:
+            #print(str(x) + '/' + str(len(self.agents)) + ' = ' + str(int(x/len(self.agents)*100)) + '%')
+            if x < m0:
                 lis.append(agent.id)
-            if x == start_m:
-                for i in range(start_m):
-                    network.append(lis[i:start_m]+lis[0:i])
-            if x >= start_m:
+            if x == m0:
+                for i in range(m0):
+                    network.append(lis[i:m0]+lis[0:i]) # starting network is fully connected
+                k_tot = len(list(itertools.chain.from_iterable(network)))
+            if x >= m0:
                 # m_0 is set up, now for the real deal
-                Success = False
-                while not Success:
-                    i = randint(0,len(network)-1)
+                y = 0
+                added = [agent.id]
+                while y < m0: # here we take m == m0, so per new agent m0 outdegrees are made
+                    i = randint(0, len(network) - 1)
                     k_i = len(network[i])
-                    k_tot = len(list(itertools.chain.from_iterable(network)))
                     p = k_i / k_tot
-                    if p > random():
-                        Success = True
+                    if p > random() and not i in added:
+                        k_tot += 2
                         network[i].extend([agent.id])
-                        network.append([agent.id, i])
+                        if y == 0:
+                            network.append([agent.id, network[i][0]])
+                        else:
+                            network[x].append(network[i][0])
+                        y += 1
+                        added.append(i)
             x+=1
 
         x = 0

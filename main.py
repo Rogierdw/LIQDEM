@@ -14,7 +14,7 @@ def old_main_1(subjects = 2, size = 1000, min = 1, max = 100, smoothing = 3):
     world.liquid('small')
     world.liquid('power')
 
-def main(subjects = 5, size = 1000, min = 1, max = 100):
+def main(subjects = 5, size = 1000, min = 1, max = 100, degree = 20):
     world = World(subjects, size, min, max)
     # print(world.world)
 
@@ -22,10 +22,14 @@ def main(subjects = 5, size = 1000, min = 1, max = 100):
 
     #world.liquid('fully')
 
-    world.liquid('random')
-    world.liquid('regular')
-    world.liquid('small')
-    world.liquid('power')
+    world.create_network('random', degree)
+    world.liquid()
+    world.representative()
+
+    world.liquid('regular', degree)
+    world.liquid('ring', degree)
+    world.liquid('small', degree)
+    world.liquid('scale free', degree)
 
 
 

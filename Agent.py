@@ -31,29 +31,37 @@ class Agent():
         #print(self.ability)
 
 
-    def create_links(self, amount, net_type, edges = 20):
+    def create_links(self, amount, net_type, degree = 20):
         ### LIQUID VERSION
         self.links = []
         #p = 1/(amount^2)
         #p = 1 / amount
-        p = 0.15
 
         if net_type == 'fully':
             self.links = range(1, amount + 1)
 
         if net_type == 'random':
             self.links.append(self.id)
+            p = degree / amount
+            for id in range(1, amount+1):
+                if id == self.id:
+                    continue
+                elif p >= random():
+                    self.links.append(id)
+
+            '''
+            OLD RANDOM BLOCK 2
             i = 0
-            while i < edges:
+            while i < degree:
                 new = randint(1,amount)
                 if new not in self.links:
                     self.links.append(new)
                     i += 1
-            '''
-            OLD RANDOM BLOCK
+            
+            OLD RANDOM BLOCK 1
             for id in range(1, amount + 1):
                 if id==self.id:
-                    self.links.append(id)
+                    continue
                 else:
                     
                     if p >= random():
@@ -61,23 +69,37 @@ class Agent():
             '''
 
         if net_type == 'regular':
+            self.links.append(self.id)
+            i = 0
+            while i < degree:
+                new = randint(1, amount)
+                if new not in self.links:
+                    self.links.append(new)
+                    i += 1
+
+        if net_type == 'ring':
+            self.links.append(self.id)
             id = self.id + amount
-            lis = range(id - int(edges/2), id + int(edges/2) + 1)
+            lis = range(id - int(degree/2), id + int(degree/2) + 1)
             for it in lis:
-                if it%amount == 0:
+                if it % amount == self.id:
+                    continue
+                elif it%amount == 0:
                     self.links.append(amount)
                 else:
                     self.links.append(it%amount)
 
         if net_type == 'small':
+            self.links.append(self.id)
+            p = 0.25
             holder = []
             id = self.id + amount
-            lis = range(id - int(edges / 2), id + int(edges / 2) + 1)
+            lis = range(id - int(degree / 2), id + int(degree / 2) + 1)
             for it in lis:
-                if it % amount == 0:
-                    holder.append(amount)
-                elif it % amount == self.id:
+                if it % amount == self.id:
                     continue
+                elif it % amount == 0:
+                    holder.append(amount)
                 else:
                     holder.append(it % amount)
 
@@ -90,6 +112,6 @@ class Agent():
                         self.links.append(item)
                 else:
                     self.links.append(item)
-            self.links.append(self.id)
+
 
         #print(self.links)
