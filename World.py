@@ -77,6 +77,33 @@ class World():
         a = [agent.ability for agent in self.agents]
         print(np.mean(a,0))
 
+    def representative(self, degree):
+        print("\nREPRESENTATIVE DEMOCRACY - Highest Ability")
+        c = [(agent.id, np.mean(agent.ability)) for agent in self.agents]
+        id_list = []
+
+        for _ in range(degree):
+            c_argmax = np.argmax(c, 0)[1] #Spot of highest avg abil
+            id_list.append(c.pop(c_argmax)[0]) # pop highest avg ability, add id to list
+
+        ac_list = []
+        for agent in self.agents:
+            if agent.id in id_list:
+                ac_list.append(agent.ability)
+        print(np.mean(ac_list,0))
+
+        print("\nREPRESENTATIVE DEMOCRACY - Random Ability")
+        c = [(agent.id, np.mean(agent.ability)) for agent in self.agents]
+        id_list = []
+        for _ in range(degree):
+            id_list.append(c.pop(randint(0,len(c)-1))[0]) # pop highest avg ability, add id to list
+
+        ac_list = []
+        for agent in self.agents:
+            if agent.id in id_list:
+                ac_list.append(agent.ability)
+        print(np.mean(ac_list,0))
+
     def liquid(self, net_type, degree):
         print('\nLIQUID DEMOCRACY')
         print('Network type = ' + net_type)

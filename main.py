@@ -19,17 +19,16 @@ def main(subjects = 5, size = 1000, min = 1, max = 100, degree = 20):
     # print(world.world)
 
     world.direct()
+    world.representative(degree)
 
     #world.liquid('fully')
 
-    world.create_network('random', degree)
-    world.liquid()
-    world.representative()
-
+    world.liquid('random', degree)
     world.liquid('regular', degree)
     world.liquid('ring', degree)
     world.liquid('small', degree)
     world.liquid('scale free', degree)
+
 
 
 
