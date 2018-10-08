@@ -5,6 +5,9 @@ import numpy as np
 import itertools
 import networkx as nx
 
+PRINT = False
+DEBUG = False
+
 def landscape(size, min, max, SF):
     if SF == 0:
         return [randint(min, max) for _ in range(size)]
@@ -45,7 +48,8 @@ def landscape(size, min, max, SF):
 
 def create_agents(world, heur_size = 3, heur_max = 12):
     amount = int(np.math.factorial(heur_max) / np.math.factorial(heur_max - heur_size))
-    print('num.Agents = ' + str(amount))
+    if DEBUG:
+        print('num.Agents = ' + str(amount))
     agents = []
     id_list = np.random.permutation(range(0,amount))
     id = 0
@@ -74,12 +78,21 @@ class World():
 
     def direct(self):
         #DIRECT DEMOCRACY!!!
-        print("\nDIRECT DEMOCRACY")
         a = [agent.ability for agent in self.agents]
-        print(np.mean(a,0))
+        res = np.mean(a,0)
+        a_e = [agent.error for agent in self.agents]
+        err = np.mean(a_e, 0)
 
-    def representative(self, degree):
-        print("\nREPRESENTATIVE DEMOCRACY - Highest Ability")
+        if PRINT:
+            print("\nDIRECT DEMOCRACY")
+            print('Ability results')
+            print(res)
+            print('Error percentages')
+            print(err)
+
+        return(res, err)
+
+    def representative_abil(self, degree):
         c = [(agent.id, np.mean(agent.ability)) for agent in self.agents]
         id_list = []
 
@@ -88,28 +101,50 @@ class World():
             id_list.append(c.pop(c_argmax)[0]) # pop highest avg ability, add id to list
 
         ac_list = []
+        er_list = []
         for agent in self.agents:
             if agent.id in id_list:
                 ac_list.append(agent.ability)
-        print(np.mean(ac_list,0))
+                er_list.append(agent.error)
+        res = np.mean(ac_list,0)
+        err = np.mean(er_list,0)
+        if PRINT:
+            print("\nREPRESENTATIVE DEMOCRACY - Highest Ability")
+            print('Ability results')
+            print(res)
+            print('Error percentages')
+            print(err)
 
-        print("\nREPRESENTATIVE DEMOCRACY - Random Ability")
+        return (res, err)
+
+    def representative_rand(self, degree):
         c = [(agent.id, np.mean(agent.ability)) for agent in self.agents]
         id_list = []
         for _ in range(degree):
             id_list.append(c.pop(randint(0,len(c)-1))[0]) # pop highest avg ability, add id to list
 
         ac_list = []
+        er_list = []
         for agent in self.agents:
             if agent.id in id_list:
                 ac_list.append(agent.ability)
-        print(np.mean(ac_list,0))
+                er_list.append(agent.error)
+        res = np.mean(ac_list, 0)
+        err = np.mean(er_list, 0)
+
+        if PRINT:
+            print("\nREPRESENTATIVE DEMOCRACY - Random Ability")
+            print('Ability results')
+            print(res)
+            print('Error percentages')
+            print(err)
+
+        return (res, err)
 
     def liquid(self, net_type, degree=20):
-        print('\nLIQUID DEMOCRACY')
-        print('Network type = ' + net_type)
         self.create_network(net_type, degree)
-        print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents]))-1)
+        if DEBUG:
+            print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents])-1))
 
         ## Each agent determines links with highest ability (best_links)
         self.search_best_links()
@@ -130,15 +165,26 @@ class World():
 
         ## Calculation of weighted voting power of agents
         b = np.zeros(self.subjects)
+        b_e = np.zeros(self.subjects)
         for idx in range(self.subjects):
             aggregation = 0
             for agent in self.agents:
                 if voting_power[agent.id-1][idx] != 0:
                     b[idx] += voting_power[agent.id-1][idx] * agent.ability[idx]
+                    b_e[idx] += voting_power[agent.id-1][idx] * agent.error[idx]
                     aggregation += voting_power[agent.id-1][idx]
             b[idx] = b[idx] / aggregation
+            b_e[idx] = b_e[idx] / aggregation
 
-        print(b)
+        if PRINT:
+            print('\nLIQUID DEMOCRACY')
+            print('Network type = ' + net_type)
+            print('Ability results')
+            print(b)
+            print('Error percentages')
+            print(b_e)
+
+        return (b, b_e)
 
     def create_network(self, net_type, degree):
         #print('NetworkX creating network')
@@ -170,8 +216,9 @@ class World():
             while not nx.is_connected(G):
                 G = nx.barabasi_albert_graph(n=self.amount, m=int(degree / 2))
 
-        print('number of nodes: '+str(G.number_of_nodes()))
-        print('number of edges: '+str(G.number_of_edges()))
+        if DEBUG:
+            print('number of nodes: '+str(G.number_of_nodes()))
+            print('number of edges: '+str(G.number_of_edges()))
         self.from_graph_to_links(G.edges())
 
 
@@ -193,7 +240,6 @@ class World():
                         agent.add_link(edge[0])
                     if edge[1] not in agent.links:
                         agent.add_link(edge[1])
-
 
     def search_best_links(self):
         ### LIQUID VERSION, searches agent.links

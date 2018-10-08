@@ -22,11 +22,14 @@ class Agent():
         self.links = []
         i = 0
         self.ability = np.zeros(len(world))
+        self.error = np.zeros(len(world))
         for landscape in world:
+            top = max(landscape)
             ab_id = np.zeros(len(landscape))
             for id in range(len(ab_id)):
-                ab_id[id] = agent_search(heuristic, landscape, id, landscape[id])
+                ab_id[id] = agent_search(heuristic, landscape, id, landscape[id]) # ab_id is the ability for each starting position
             self.ability[i] = np.mean(ab_id)
+            self.error[i] = (top - self.ability[i])/top *100
             i += 1
         #print(self.id)
         #print(self.ability)
