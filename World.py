@@ -1,11 +1,10 @@
-from random import randint, random
+from random import randint, uniform
 from math import floor,ceil
 from Agent import Agent
 import numpy as np
-import itertools
 import networkx as nx
 
-PRINT = False
+PRINT = True
 DEBUG = False
 
 def landscape(size, min, max, SF):
@@ -46,12 +45,18 @@ def landscape(size, min, max, SF):
                 i = j
         return subj
 
-def create_agents(world, heur_size = 3, heur_max = 12):
+def create_agents(world, heur_size = 3, heur_max = 12, percentage = 100):
     amount = int(np.math.factorial(heur_max) / np.math.factorial(heur_max - heur_size))
+    if not percentage==100:
+        num = int(amount*percentage/100)
+    else:
+        num = amount
+
+
     if DEBUG:
-        print('num.Agents = ' + str(amount))
+        print('num.Agents = ' + str(num))
     agents = []
-    id_list = np.random.permutation(range(0,amount))
+    id_list = range(0,amount)
     id = 0
     while id < amount:
         for i in range(1, heur_max + 1):
@@ -61,12 +66,18 @@ def create_agents(world, heur_size = 3, heur_max = 12):
                         new_agent = Agent(id_list[id], (i, j, k), world)
                         agents.append(new_agent)
                         id += 1
-    return agents, amount
+    # If percentage is 100, agent sample will just have all agents, but shuffeled.
+    agents_sample = []
+    for i in range(num):
+        agent = agents.pop(randint(0,len(agents)-1))
+        agent.id = i
+        agents_sample.append(agent)
+    return agents_sample, num
 
 
 
 class World():
-    def __init__(self, subjects, size, min, max):
+    def __init__(self, subjects, size, min, max, percentage):
         self.subjects = subjects
         #OLD, SET SMOOTHING
         #self.world = [landscape(size,min,max,SF=3) for _ in range(subjects)]
@@ -74,7 +85,7 @@ class World():
         self.world = []
         for SF in range(subjects):
             self.world.append(landscape(size=size, min=min, max=max, SF=SF))
-        self.agents, self.amount = create_agents(self.world)
+        self.agents, self.amount = create_agents(self.world, percentage=percentage)
 
     def direct(self):
         #DIRECT DEMOCRACY!!!
@@ -141,13 +152,10 @@ class World():
 
         return (res, err)
 
-    def liquid(self, net_type, degree=20):
+    def liquid(self, net_type, degree=20, epsilon=2):
         self.create_network(net_type, degree)
-        if DEBUG:
-            print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents])-1))
-
         ## Each agent determines links with highest ability (best_links)
-        self.search_best_links()
+        self.search_best_links(epsilon=epsilon)
 
         ## Delegation of votes in while loop
         voting_power = np.ones([len(self.agents), self.subjects])
@@ -179,6 +187,8 @@ class World():
         if PRINT:
             print('\nLIQUID DEMOCRACY')
             print('Network type = ' + net_type)
+            if DEBUG:
+                print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents]) - 1))
             print('Ability results')
             print(b)
             print('Error percentages')
@@ -240,8 +250,13 @@ class World():
                         agent.add_link(edge[0])
                     if edge[1] not in agent.links:
                         agent.add_link(edge[1])
+            if len(agent.links)==0:
+                print('ERROR: AGENT HAS NO LINKS:')
+                print(agent.id, agent.links)
+                print('total agents in sample: ' + str(self.amount))
+                quit()
 
-    def search_best_links(self):
+    def search_best_links(self, epsilon):
         ### LIQUID VERSION, searches agent.links
         for agent in self.agents:
             #agent.best_links = []
@@ -249,7 +264,11 @@ class World():
             for link in agent.links:
                 for agent2 in self.agents:
                     if agent2.id == link:
-                        x = np.vstack([x, agent2.ability])
+                        ab = agent2.ability
+                        print(agent2.ability)
+                        for i in range(len(ab)):
+                            ab[i] = ab[i] + uniform(-epsilon, epsilon)
+                        x = np.vstack([x, ab])
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
             #print(agent.best_links)
 
