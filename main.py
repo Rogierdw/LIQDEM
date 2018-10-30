@@ -45,24 +45,24 @@ def single(subjects = 5, size = 2000, min = 1, max = 100, degree = 20, percentag
     world = World(subjects, size, min, max, percentage, PRINT=True)
     # print(world.world)
 
-    world.direct()
-    world.representative_abil(degree)
-    world.representative_rand(degree)
+    #world.direct()
+    #world.representative_abil(degree)
+    #world.representative_rand(degree)
 
     world.liquid('random', degree, epsilon)
     world.liquid('regular', degree, epsilon)
     world.liquid('ring', degree, epsilon)
     world.liquid('small', degree, epsilon)
     world.liquid('scale free', degree, epsilon)
-    #world.liquid('fully')
+    world.liquid('fully', degree, epsilon)
 
 if __name__ == '__main__':
     print(sys.version)
 
     subjects = 5
     degree = 20
-    percentage = 50
-    epsilon = 0.2
+    percentage = 100
+    epsilon = 0.02
     iterations = 100
 
     if SWEEP:

@@ -1,5 +1,4 @@
 from random import randint, uniform
-from math import floor,ceil
 from copy import copy
 from Agent import Agent
 import numpy as np
@@ -9,38 +8,37 @@ DEBUG = True
 
 def landscape(size, min, max, SF):
     if SF == 0:
-        return [randint(min, max) for _ in range(size)]
+        return [randint(min, max) for _ in range(size)] # random landscape of size size, integers between min and max
     else:
-        subj = [0 for _ in range(size)]
+        subj = [0 for _ in range(size)]                 # intialize all idx to zero
         i = 0
         br = False
-        subj[i] = randint(min, max)
+        subj[i] = randint(min, max)                     # random value on first idx
         while (i < size):
 
-            add = randint(1, 2 * SF + 1)  # Next integer
-            j = i + add
-            if (j >= size):  # End of circle
-                j = 0
+            add = randint(1, 2 * SF + 1)
+            j = i + add                                 # j is next integer for random value
+            if (j >= size):                             # End of circle
+                j = 0                                   # next point is first point on circle
                 diff_idx = size - i
                 br = True
-            else:  # Next point on circle
-                subj[j] = randint(min, max)
-                diff_idx = j - i
+            else:                                       # Next point on circle
+                subj[j] = randint(min, max)             # random
+                diff_idx = add
 
-            if(diff_idx > 1):  # Filling integers
-                k = 1
-                diff = subj[j] - subj[i]
-                change = diff / diff_idx
-                flo = floor(change)
-                cei = ceil(change)
-                while(k < diff_idx):
-                    if(k%2==0):
-                        subj[i + k] = subj[i+k-1] + flo
-                    else:
-                        subj[i + k] = subj[i + k - 1] + cei
+            if(diff_idx > 1):                           # if i and j are apart, need to fill
+                k = i + 1
+                diff = subj[j] - subj[i]                #  difference between points
+                change = float(diff) / diff_idx         # change per idx
+                while (k < i + diff_idx):
+                    subj[k] = subj[k-1] + change        # first add change to each previous value
+                    k+=1
+                k = i + 1
+                while (k < i + diff_idx):
+                    subj[k] = int(round(subj[k]))       # then round and cast to int
                     k += 1
             if br:
-                break
+                break                                   # This is done after the intermediate value are filled in
             else:
                 i = j
         return subj
@@ -56,22 +54,21 @@ def create_agents(world, heur_size = 3, heur_max = 12, percentage = 100):
     if DEBUG:
         print('num.Agents = ' + str(num))
     agents = []
-    id_list = range(0,amount)
     id = 0
     while id < amount:
         for i in range(1, heur_max + 1):
             for j in range(1, heur_max + 1):
                 for k in range(1, heur_max + 1):
                     if i != j and i != k and j !=k:
-                        new_agent = Agent(id_list[id], (i, j, k), world)
+                        new_agent = Agent(id, (i, j, k), world) # new agents, heurs are ordered
                         agents.append(new_agent)
                         id += 1
     # If percentage is 100, agent sample will just have all agents, but shuffeled.
     agents_sample = []
     for i in range(num):
-        agent = agents.pop(randint(0,len(agents)-1))
-        agent.id = i
-        agents_sample.append(agent)
+        agent = agents.pop(randint(0,len(agents)-1))        # random agent from agent list is popped
+        agent.id = i                                        # new id given, this makes sure the heurs are shuffled
+        agents_sample.append(agent)                         # sample list is returned
     return agents_sample, num
 
 def calc_diversity(agent1, agent2):
@@ -112,11 +109,9 @@ class World():
         if self.PRINT:
             print("\nDIRECT DEMOCRACY")
 
-        a = [agent.ability for agent in self.agents]
-        res = np.mean(a,0)
-        a_e = [agent.error for agent in self.agents]
-        err = np.mean(a_e, 0)
-        div = calc_population_diversity(copy(self.agents))
+        res = np.mean([agent.ability for agent in self.agents],0)   # mean of all agent abilities
+        err = np.mean([agent.error for agent in self.agents], 0)    # mean of all agent errors
+        div = calc_population_diversity(copy(self.agents))          # copy needed so that self.agents stays the same
 
         if self.PRINT:
             print('Ability results')
@@ -160,10 +155,10 @@ class World():
         return (res, err, div)
 
     def representative_rand(self, degree):
-        c = [(agent.id, np.mean(agent.ability)) for agent in self.agents]
+        c = [agent.id for agent in self.agents]
         id_list = []
         for _ in range(degree):
-            id_list.append(c.pop(randint(0,len(c)-1))[0]) # pop highest avg ability, add id to list
+            id_list.append(c.pop(randint(0,len(c)-1))) # pop random agent, add id to list
 
         ac_list = []
         er_list = []
@@ -200,56 +195,52 @@ class World():
             print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents]) - 1))
             print('starting delegation of votes')
 
-        ## Delegation of votes in while loop
-        voting_power = np.ones([len(self.agents), self.subjects])
-        DELEGATE = True
-        while DELEGATE:
-            DELEGATE = False
-            for agent in self.agents:
-                for idx in range(self.subjects):
-                    if voting_power[agent.id-1][idx] != 0:
-                        if agent.best_links[idx] != agent.id:
-                            DELEGATE = True
-                            deleg = voting_power[agent.id-1][idx]
-                            voting_power[agent.id-1][idx] = 0
-                            voting_power[agent.best_links[idx]-1][idx] += deleg
+        ### Delegation in seperate function!
+        voting_power = self.delegation()
 
         ## Calculation of weighted voting power of agents
-        b = np.zeros(self.subjects)
-        b_e = np.zeros(self.subjects)
-        div_a = np.zeros(self.subjects)
-        wdiv_a = np.zeros(self.subjects)
+        ability = np.zeros(self.subjects)
+        error = np.zeros(self.subjects)
+        diversity = np.zeros(self.subjects)
+        weighted_diversity = np.zeros(self.subjects)
+        votes_left = np.zeros(self.subjects)
 
-        for idx in range(self.subjects):
+
+
+        for idx in range(self.subjects): # actual voting
             div = []
             wdiv = []
             aggregation = 0
             for agent in self.agents:
                 if voting_power[agent.id-1][idx] != 0:
-                    b[idx] += voting_power[agent.id-1][idx] * agent.ability[idx]
-                    b_e[idx] += voting_power[agent.id-1][idx] * agent.error[idx]
+                    ability[idx] += voting_power[agent.id-1][idx] * agent.ability[idx]
+                    error[idx] += voting_power[agent.id-1][idx] * agent.error[idx]
                     aggregation += voting_power[agent.id-1][idx]
 
                     div.append(agent)
                     wdiv.extend([agent for i in range(int(voting_power[agent.id-1][idx]))])
 
-            b[idx] = b[idx] / aggregation
-            b_e[idx] = b_e[idx] / aggregation
+            ability[idx] = ability[idx] / aggregation
+            error[idx] = error[idx] / aggregation
 
-            div_a[idx] = calc_population_diversity(div)
-            wdiv_a[idx] = calc_population_diversity(wdiv)
+            diversity[idx] = calc_population_diversity(div)
+            weighted_diversity[idx] = calc_population_diversity(wdiv)
+
+            votes_left[idx] = float(aggregation)/self.amount*100
 
         if self.PRINT:
             print('Ability results')
-            print(b)
+            print(ability)
             print('Error percentages')
-            print(b_e)
+            print(error)
             print('Div_vote')
-            print(div_a)
+            print(diversity)
             print('WDiv_vote')
-            print(wdiv_a)
+            print(weighted_diversity)
+            print('Votes_left_%' )
+            print(votes_left)
 
-        return (b, b_e, div_a, wdiv_a)
+        return (ability, error, diversity, weighted_diversity)
 
     def create_network(self, net_type, degree):
         #print('NetworkX creating network')
@@ -287,21 +278,12 @@ class World():
             print('number of edges: '+str(G.number_of_edges()))
         self.from_graph_to_links(G.edges())
 
-
-        '''
-        # Agent network creation LIQUID OWN VERSION, DEPRECATED
-        if net_type=='scale free':
-            self.create_scale_free_network(int(degree/2))
-        else:
-            for agent in self.agents:
-                agent.create_links(self.amount, net_type, degree)
-        '''
-
     def from_graph_to_links(self, edges):
         if DEBUG:
             print('starting conversion from graph to links')
         for agent in self.agents:
             agent.clear_links()
+            agent.clear_received()
             for edge in edges:
                 if agent.id in edge:
                     if edge[0] not in agent.links:
@@ -309,25 +291,52 @@ class World():
                     if edge[1] not in agent.links:
                         agent.add_link(edge[1])
             if len(agent.links)==0:
-                print('ERROR: AGENT HAS NO LINKS:')
-                print(agent.id, agent.links)
                 print('total agents in sample: ' + str(self.amount))
-                quit()
+                print(agent.id, agent.links)
+                quit("ERROR: THIS AGENT HAS NO LINKS")
 
     def search_best_links(self, epsilon):
-        ### LIQUID VERSION, searches agent.links
+        ### LIQUID VERSION, searches agent.links for highest agent.link.ability
         if DEBUG:
             print('searching for best links of agents')
 
-        for agent in self.agents:
+        for agent in self.agents:                   # For each agent
             #agent.best_links = []
-            x = np.empty([0,len(agent.ability)])
-            for link in agent.links:
-                for agent2 in self.agents:
-                    if link == agent2.id:
+            x = np.empty([0,len(agent.ability)])    # x is ability of links
+            for link in agent.links:                # for each link of agent
+                for agent2 in self.agents:          # all other agents
+                    if link == agent2.id:           # if other agent is a link
                         ab = agent2.ability
                         for i in range(len(ab)):
-                            ab[i] = ab[i] + uniform(-epsilon, epsilon)
-                        x = np.vstack([x, ab])
+                            ab[i] = ab[i] + uniform(-epsilon, epsilon)  # ability is changed with epsilon
+                        x = np.vstack([x, ab])      # x is stacked ability
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
             #print(agent.best_links)
+
+    def delegation(self):
+        voting_power = np.ones([len(self.agents), self.subjects])  ## voting power of agent, 1 per agent/subject
+        DELEGATE = True
+        while DELEGATE:
+            DELEGATE = False
+            for agent in self.agents:                               # For each agent
+
+
+                for idx in range(self.subjects):                    # for each subject
+                    if voting_power[agent.id][idx] != 0:        # if agent has voting power
+                        if agent.best_links[idx] != agent.id:       # if agent wants to delegate
+                            if agent.best_links[idx] in agent.received_votes_from[idx]: # Agent wants to delegate to agent that it received power from, so CIRCLE. Delete all power from system
+                                if DEBUG:
+                                    print('Delegation cycle detected in landscape ' + str(idx) + ', deleting number of votes: ' + str(len(agent.received_votes_from[idx])))
+                                voting_power[agent.id][idx] = 0 # voting power set to 0, no delegation
+                                # THIS MAY BE CHANGED FOR EXPERIMENTATIONS
+                            else:
+                                DELEGATE = True
+                                deleg = voting_power[agent.id][idx] # how much power is delegated
+                                voting_power[agent.id][idx] = 0     # own voting power set to 0
+                                voting_power[agent.best_links[idx]][idx] += deleg   # voting power of delegate is updated
+
+                                for agent2 in self.agents:      # ADD agent.id to agent2.best_links AGENT list
+                                    if agent2.id == agent.best_links[idx]:
+                                        agent2.received_votes_from[idx].append(agent.id)
+
+        return voting_power

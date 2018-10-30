@@ -1,8 +1,8 @@
 import numpy as np
-from random import random, randint
 
-def agent_search(heuristic, landscape, idx, val):
+def agent_search(heuristic, landscape, idx, value):
     i = 0
+    val = value
     heurs_used = 0
     while heurs_used <= len(heuristic):
         new = landscape[(idx + heuristic[i])%len(landscape)]
@@ -33,6 +33,7 @@ class Agent():
             self.ability[i] = np.mean(ab_id)
             self.error[i] = (top - self.ability[i])*100/top
             i += 1
+        self.received_votes_from = [[] for i in range(len(self.ability))]
         #print(self.id)
         #print(self.ability)
 
@@ -41,3 +42,6 @@ class Agent():
 
     def clear_links(self):
         self.links = []
+
+    def clear_received(self):
+        self.received_votes_from = [[] for i in range(len(self.ability))]
