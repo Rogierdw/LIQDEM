@@ -4,7 +4,7 @@ from Agent import Agent
 import numpy as np
 import networkx as nx
 
-DEBUG = True
+DEBUG = False
 
 def landscape(size, min, max, SF):
     if SF == 0:
@@ -109,19 +109,16 @@ class World():
         if self.PRINT:
             print("\nDIRECT DEMOCRACY")
 
-        res = np.mean([agent.ability for agent in self.agents],0)   # mean of all agent abilities
         err = np.mean([agent.error for agent in self.agents], 0)    # mean of all agent errors
         div = calc_population_diversity(copy(self.agents))          # copy needed so that self.agents stays the same
 
         if self.PRINT:
-            print('Ability results')
-            print(res)
             print('Error percentages')
             print(err)
             print('Diversity')
             print(div)
 
-        return(res, err, div)
+        return(err, div)
 
     def representative_abil(self, degree):
         c = [(agent.id, np.mean(agent.ability)) for agent in self.agents]
@@ -131,28 +128,23 @@ class World():
             c_argmax = np.argmax(c, 0)[1] #Spot of highest avg abil
             id_list.append(c.pop(c_argmax)[0]) # pop highest avg ability, add id to list
 
-        ac_list = []
         er_list = []
         ag_list = []
         for agent in self.agents:
             if agent.id in id_list:
-                ac_list.append(agent.ability)
                 er_list.append(agent.error)
                 ag_list.append(agent)
-        res = np.mean(ac_list,0)
         err = np.mean(er_list,0)
         div = calc_population_diversity(ag_list)
 
         if self.PRINT:
             print("\nREPRESENTATIVE DEMOCRACY - Highest Ability")
-            print('Ability results')
-            print(res)
             print('Error percentages')
             print(err)
             print('Div_vote')
             print(div)
 
-        return (res, err, div)
+        return (err, div)
 
     def representative_rand(self, degree):
         c = [agent.id for agent in self.agents]
@@ -160,28 +152,23 @@ class World():
         for _ in range(degree):
             id_list.append(c.pop(randint(0,len(c)-1))) # pop random agent, add id to list
 
-        ac_list = []
         er_list = []
         ag_list = []
         for agent in self.agents:
             if agent.id in id_list:
-                ac_list.append(agent.ability)
                 er_list.append(agent.error)
                 ag_list.append(agent)
-        res = np.mean(ac_list, 0)
         err = np.mean(er_list, 0)
         div = calc_population_diversity(ag_list)
 
         if self.PRINT:
             print("\nREPRESENTATIVE DEMOCRACY - Random Ability")
-            print('Ability results')
-            print(res)
             print('Error percentages')
             print(err)
             print('Div_vote')
             print(div)
 
-        return (res, err, div)
+        return (err, div)
 
     def liquid(self, net_type, degree=20, epsilon=0):
         if self.PRINT:
@@ -199,7 +186,6 @@ class World():
         voting_power = self.delegation()
 
         ## Calculation of weighted voting power of agents
-        ability = np.zeros(self.subjects)
         error = np.zeros(self.subjects)
         diversity = np.zeros(self.subjects)
         weighted_diversity = np.zeros(self.subjects)
@@ -213,14 +199,12 @@ class World():
             aggregation = 0
             for agent in self.agents:
                 if voting_power[agent.id-1][idx] != 0:
-                    ability[idx] += voting_power[agent.id-1][idx] * agent.ability[idx]
                     error[idx] += voting_power[agent.id-1][idx] * agent.error[idx]
                     aggregation += voting_power[agent.id-1][idx]
 
                     div.append(agent)
                     wdiv.extend([agent for i in range(int(voting_power[agent.id-1][idx]))])
 
-            ability[idx] = ability[idx] / aggregation
             error[idx] = error[idx] / aggregation
 
             diversity[idx] = calc_population_diversity(div)
@@ -229,8 +213,6 @@ class World():
             votes_left[idx] = float(aggregation)/self.amount*100
 
         if self.PRINT:
-            print('Ability results')
-            print(ability)
             print('Error percentages')
             print(error)
             print('Div_vote')
@@ -240,7 +222,7 @@ class World():
             print('Votes_left_%' )
             print(votes_left)
 
-        return (ability, error, diversity, weighted_diversity)
+        return (error, diversity, weighted_diversity, votes_left)
 
     def create_network(self, net_type, degree):
         #print('NetworkX creating network')
