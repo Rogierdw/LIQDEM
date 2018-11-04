@@ -1,8 +1,10 @@
 import sys, csv
 from World import World
+from time import time
 
 SWEEP = False
 EPSWEEP = True
+TIME = False
 
 def old_main_1(subjects = 2, size = 1000, min = 1, max = 100, smoothing = 3):
     world = World(subjects, size, min, max, smoothing)
@@ -60,11 +62,14 @@ def single(subjects = 5, size = 2000, min = 1, max = 100, degree = 20, percentag
 if __name__ == '__main__':
     print(sys.version)
 
-    subjects = 5
-    degree = 10
-    percentage = 100
-    epsilons = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2]
+    subjects = 1
+    degree = 15
+    percentage = 75
+    epsilons = [1, 1.5, 2] #0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5,
     iterations = 10
+
+    initial_time = time()
+    old_time = time()
 
     if SWEEP:
         for epsilon in epsilons:
@@ -119,7 +124,17 @@ if __name__ == '__main__':
                                  ['liq_small'] * subjects + ['liq_scalefree'] * subjects)# + ['liq_full'] * subjects)
                 for i in range(iterations):
                     print('ROUND: '+ str(epsilon) +', ITERATION: ' + str(i+1))
+
                     (err, div, wdiv, vot) = sweep(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilon)
                     writer4.writerow(vot)
+
+                    if TIME:
+                        print('Time elapsed (s): ' + str(time() - initial_time))
+                        print('Time elapsed (m): ' + str((time() - initial_time) / 60))
+                        new_time = time()
+                        print('Iterations duration (s): ' + str(new_time - old_time))
+                        print('Iterations duration (m): ' + str((new_time - old_time) / 60))
+                        old_time = new_time
+
     else:
-        single(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilon)
+        single(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilons[0])

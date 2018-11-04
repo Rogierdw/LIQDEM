@@ -101,7 +101,7 @@ class World():
         #NEW, Ramping smoothing
         self.world = []
         for SF in range(subjects):
-            self.world.append(landscape(size=size, min=min, max=max, SF=SF))
+            self.world.append(landscape(size=size, min=min, max=max, SF=2))
         self.agents, self.amount = create_agents(self.world, percentage=percentage)
 
     def direct(self):
@@ -185,6 +185,8 @@ class World():
         ### Delegation in seperate function!
         voting_power = self.delegation()
 
+        if DEBUG:
+            print('Calculate actual voting > weighted mean')
         ## Calculation of weighted voting power of agents
         error = np.zeros(self.subjects)
         diversity = np.zeros(self.subjects)
@@ -265,7 +267,6 @@ class World():
             print('starting conversion from graph to links')
         for agent in self.agents:
             agent.clear_links()
-            agent.clear_received()
             for edge in edges:
                 if agent.id in edge:
                     if edge[0] not in agent.links:
@@ -297,28 +298,32 @@ class World():
 
     def delegation(self):
         voting_power = np.ones([len(self.agents), self.subjects])  ## voting power of agent, 1 per agent/subject
+        received_from = [[[] for _ in range(self.subjects)] for _ in range(self.amount)]
         DELEGATE = True
         while DELEGATE:
+            print('NEW DELEGATION ROUND')
             DELEGATE = False
             for agent in self.agents:                               # For each agent
-
-
                 for idx in range(self.subjects):                    # for each subject
-                    if voting_power[agent.id][idx] != 0:        # if agent has voting power
+                    if voting_power[agent.id][idx] != 0:            # if agent has voting power
                         if agent.best_links[idx] != agent.id:       # if agent wants to delegate
-                            if agent.best_links[idx] in agent.received_votes_from[idx]: # Agent wants to delegate to agent that it received power from, so CIRCLE. Delete all power from system
+                            if agent.best_links[idx] in received_from[agent.id][idx]: # Agent wants to delegate to agent that it received power from, so CIRCLE DETECTED
                                 if DEBUG:
-                                    print('Delegation cycle detected in landscape ' + str(idx) + ', deleting number of votes: ' + str(len(agent.received_votes_from[idx])))
+                                    print('Delegation cycle detected in landscape ' + str(idx) + ', deleting number of votes: ' + str(len(received_from[agent.id][idx])))
                                 voting_power[agent.id][idx] = 0 # voting power set to 0, no delegation
                                 # THIS MAY BE CHANGED FOR EXPERIMENTATIONS
                             else:
+                                print(str(agent.id) + ' is delegating...')
+                                print('best option = ' + str(agent.best_links[idx]))
+                                print('received from = ' + str(received_from[agent.id][idx]))
+                                print(agent.best_links[idx] in received_from[agent.id][idx])
                                 DELEGATE = True
                                 deleg = voting_power[agent.id][idx] # how much power is delegated
                                 voting_power[agent.id][idx] = 0     # own voting power set to 0
                                 voting_power[agent.best_links[idx]][idx] += deleg   # voting power of delegate is updated
 
-                                for agent2 in self.agents:      # ADD agent.id to agent2.best_links AGENT list
-                                    if agent2.id == agent.best_links[idx]:
-                                        agent2.received_votes_from[idx].append(agent.id)
-
+                                if agent.id not in received_from[agent.best_links[idx]][idx]:
+                                    received_from[agent.best_links[idx]][idx].append(agent.id) # Add agent.id to best link received votes
+        if DEBUG:
+            print("DELEGATION done")
         return voting_power
