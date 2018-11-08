@@ -101,7 +101,7 @@ class World():
         #NEW, Ramping smoothing
         self.world = []
         for SF in range(subjects):
-            self.world.append(landscape(size=size, min=min, max=max, SF=2))
+            self.world.append(landscape(size=size, min=min, max=max, SF = 2))
         self.agents, self.amount = create_agents(self.world, percentage=percentage)
 
     def direct(self):
@@ -179,7 +179,7 @@ class World():
         self.search_best_links(epsilon=epsilon)
 
         if DEBUG:
-            print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents]) - 1))
+            print('mean degree: ' + str(np.mean([len(agent.links) for agent in self.agents])))
             print('starting delegation of votes')
 
         ### Delegation in seperate function!
@@ -200,12 +200,12 @@ class World():
             wdiv = []
             aggregation = 0
             for agent in self.agents:
-                if voting_power[agent.id-1][idx] != 0:
-                    error[idx] += voting_power[agent.id-1][idx] * agent.error[idx]
-                    aggregation += voting_power[agent.id-1][idx]
+                if voting_power[agent.id][idx] != 0:
+                    error[idx] += voting_power[agent.id][idx] * agent.error[idx]
+                    aggregation += voting_power[agent.id][idx]
 
                     div.append(agent)
-                    wdiv.extend([agent for i in range(int(voting_power[agent.id-1][idx]))])
+                    wdiv.extend([agent for i in range(int(voting_power[agent.id][idx]))])
 
             error[idx] = error[idx] / aggregation
 
@@ -301,7 +301,7 @@ class World():
         received_from = [[[] for _ in range(self.subjects)] for _ in range(self.amount)]
         DELEGATE = True
         while DELEGATE:
-            print('NEW DELEGATION ROUND')
+            #print('NEW DELEGATION ROUND')
             DELEGATE = False
             for agent in self.agents:                               # For each agent
                 for idx in range(self.subjects):                    # for each subject
@@ -313,17 +313,18 @@ class World():
                                 voting_power[agent.id][idx] = 0 # voting power set to 0, no delegation
                                 # THIS MAY BE CHANGED FOR EXPERIMENTATIONS
                             else:
-                                print(str(agent.id) + ' is delegating...')
-                                print('best option = ' + str(agent.best_links[idx]))
-                                print('received from = ' + str(received_from[agent.id][idx]))
-                                print(agent.best_links[idx] in received_from[agent.id][idx])
+                                #print(str(agent.id) + ' is delegating...')
+                                #print('best option = ' + str(agent.best_links[idx]))
+                                #print('received from = ' + str(received_from[agent.id][idx]))
+                                #print(agent.best_links[idx] in received_from[agent.id][idx])
                                 DELEGATE = True
                                 deleg = voting_power[agent.id][idx] # how much power is delegated
                                 voting_power[agent.id][idx] = 0     # own voting power set to 0
                                 voting_power[agent.best_links[idx]][idx] += deleg   # voting power of delegate is updated
 
-                                if agent.id not in received_from[agent.best_links[idx]][idx]:
-                                    received_from[agent.best_links[idx]][idx].append(agent.id) # Add agent.id to best link received votes
+                                received_from[agent.best_links[idx]][idx].append(agent.id) # Add agent.id to best link received votes
+
+                                received_from[agent.best_links[idx]][idx].extend(received_from[agent.id][idx]) # Add receival elders
         if DEBUG:
             print("DELEGATION done")
         return voting_power
