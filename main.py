@@ -1,6 +1,7 @@
 import sys, csv
 from World import World
 from time import time
+from numpy import linspace
 
 SWEEP = True
 EPSWEEP = False
@@ -65,8 +66,10 @@ if __name__ == '__main__':
     subjects = 1
     degree = 15
     percentage = 75
-    epsilons = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 3,4, 5, 10, 20, 30, 40, 50, 100] #
+    #epsilons = linspace(0,10,41)
+    epsilons = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60, 70, 80 ,90, 100] #
     iterations = 100
+    name = 'bounded_shuffled'
 
     initial_time = time()
     old_time = time()
@@ -74,15 +77,15 @@ if __name__ == '__main__':
     if SWEEP:
         for epsilon in epsilons:
         # TO CSV!
-            with open('error_' + str(subjects) + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
+            with open(name + '_error' + str(subjects) + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
                               'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as f,\
-                    open('diversity_'+ str(subjects)
+                    open(name + '_diversity_'+ str(subjects)
                             + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
                               'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as g,\
-                    open('weight_diversity_' + str(subjects)
+                    open(name + '_weight_diversity_' + str(subjects)
                          + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
                          'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as h, \
-                    open('votes_left_percent_' + str(subjects)
+                    open(name + '_votes_left_percent_' + str(subjects)
                          + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
                          'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as x:
                 writer1 = csv.writer(f)
@@ -143,6 +146,5 @@ if __name__ == '__main__':
                         print('Iterations duration (s): ' + str(new_time - old_time))
                         print('Iterations duration (m): ' + str((new_time - old_time) / 60))
                         old_time = new_time
-
     else:
         single(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilons[0])

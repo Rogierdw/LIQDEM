@@ -1,4 +1,5 @@
-from random import randint, uniform
+from random import randint, uniform, shuffle, gauss
+from scipy.stats import truncnorm as tn
 from copy import copy
 from Agent import Agent
 import numpy as np
@@ -93,15 +94,17 @@ def calc_population_diversity(agent_list):
 
 
 class World():
-    def __init__(self, subjects, size, min, max, percentage, PRINT):
+    def __init__(self, subjects, size, mina, maxa, percentage, PRINT):
         self.PRINT = PRINT
+        self.min = mina
+        self.max = maxa
         self.subjects = subjects
         #OLD, SET SMOOTHING
         #self.world = [landscape(size,min,max,SF=3) for _ in range(subjects)]
         #NEW, Ramping smoothing
         self.world = []
         for SF in range(subjects):
-            self.world.append(landscape(size=size, min=min, max=max, SF = 2))
+            self.world.append(landscape(size=size, min=mina, max=maxa, SF = 2))
         self.agents, self.amount = create_agents(self.world, percentage=percentage)
 
     def direct(self):
@@ -291,7 +294,13 @@ class World():
                     if link == agent2.id:           # if other agent is a link
                         ab = agent2.ability
                         for i in range(len(ab)):
-                            ab[i] = ab[i] + uniform(-epsilon, epsilon)  # ability is changed with epsilon
+                            ab[i] = uniform(max(self.min,ab[i]-epsilon), min(self.max, ab[i]+epsilon)) # First bound, then take uniform sample of interval
+
+                            #ab[i] = tn.rvs(self.min-ab[i], self.max-ab[i], loc = ab[i], scale = epsilon) # truncated normal distribution
+
+                            #ab[i] = gauss(ab[i], epsilon)  # Gauss
+
+                            ab[i] = max(self.min,(min(ab[i], self.max))) # bound ability between min and max of landscape ## Extra check
                         x = np.vstack([x, ab])      # x is stacked ability
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
             #print(agent.best_links)
@@ -303,6 +312,7 @@ class World():
         while DELEGATE:
             #print('NEW DELEGATION ROUND')
             DELEGATE = False
+            shuffle(self.agents)
             for agent in self.agents:                               # For each agent
                 for idx in range(self.subjects):                    # for each subject
                     if voting_power[agent.id][idx] != 0:            # if agent has voting power
