@@ -1,7 +1,7 @@
 import sys, csv
 from World import World
 from time import time
-from numpy import linspace
+from numpy import linspace, append
 
 SWEEP = True
 EPSWEEP = False
@@ -66,10 +66,14 @@ if __name__ == '__main__':
     subjects = 1
     degree = 15
     percentage = 75
-    #epsilons = linspace(0,10,41)
-    epsilons = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60, 70, 80 ,90, 100] #
+    e = linspace(0,1,11)
+    e2 = linspace(1.5,10,18)
+    epsilons = append(e,e2)
+
+
+    #epsilons = [ 0, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100] #
     iterations = 100
-    name = 'bounded_shuffled'
+    name = 'bound_complete'
 
     initial_time = time()
     old_time = time()

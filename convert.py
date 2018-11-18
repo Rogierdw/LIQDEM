@@ -1,13 +1,12 @@
 import os, xlsxwriter, csv, glob
 
-csvfile = glob.glob("bounded*.csv")[0]
-for csvfile in glob.glob("bounded*.csv"):
+for csvfile in glob.glob("*.csv"):
 
     # Create a workbook and add a worksheet.
     workbook = xlsxwriter.Workbook(csvfile+".xlsx", {'strings_to_numbers': True})
     worksheet = workbook.add_worksheet()
 
-    r=0
+    r=1
 
     with open(csvfile, 'r') as f:
         reader = csv.reader(f)
@@ -19,7 +18,8 @@ for csvfile in glob.glob("bounded*.csv"):
             r+=1
 
 
-    worksheet.write(r+1,0, '=GEMIDDELDE(A2:A11)')
+    #worksheet.write(0,0, '=GEMIDDELDE(A3:A'+str(r)+')')
+    worksheet.write(0, 0, '=GEMIDDELDE(A3:A102)')
 
     workbook.close()
     os.remove(csvfile)

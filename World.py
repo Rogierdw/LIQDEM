@@ -296,9 +296,9 @@ class World():
                         for i in range(len(ab)):
                             ab[i] = uniform(max(self.min,ab[i]-epsilon), min(self.max, ab[i]+epsilon)) # First bound, then take uniform sample of interval
 
-                            #ab[i] = tn.rvs(self.min-ab[i], self.max-ab[i], loc = ab[i], scale = epsilon) # truncated normal distribution
-
                             #ab[i] = gauss(ab[i], epsilon)  # Gauss
+
+                            #ab[i] = tn.rvs(self.min-ab[i], self.max-ab[i], loc = ab[i], scale = epsilon) # truncated normal distribution
 
                             ab[i] = max(self.min,(min(ab[i], self.max))) # bound ability between min and max of landscape ## Extra check
                         x = np.vstack([x, ab])      # x is stacked ability
@@ -307,34 +307,67 @@ class World():
 
     def delegation(self):
         voting_power = np.ones([len(self.agents), self.subjects])  ## voting power of agent, 1 per agent/subject
-        received_from = [[[] for _ in range(self.subjects)] for _ in range(self.amount)]
+        received_from = [[[x] for _ in range(self.subjects)] for x in range(self.amount)]
         DELEGATE = True
         while DELEGATE:
             #print('NEW DELEGATION ROUND')
             DELEGATE = False
             shuffle(self.agents)
-            for agent in self.agents:                               # For each agent
-                for idx in range(self.subjects):                    # for each subject
+            for idx in range(self.subjects):                        # for each subject
+                for agent in self.agents:                           # For each agent
                     if voting_power[agent.id][idx] != 0:            # if agent has voting power
                         if agent.best_links[idx] != agent.id:       # if agent wants to delegate
                             if agent.best_links[idx] in received_from[agent.id][idx]: # Agent wants to delegate to agent that it received power from, so CIRCLE DETECTED
                                 if DEBUG:
-                                    print('Delegation cycle detected in landscape ' + str(idx) + ', deleting number of votes: ' + str(len(received_from[agent.id][idx])))
+                                    print('Delegation cycle detected in landscape ' + str(
+                                        idx) + ', handling number of votes: ' + str(len(received_from[agent.id][idx])))
+
+                                ### SELF-VOTE IMPLEMENTATION
+                                #circle_list = received_from[agent.id][idx].copy()
+                                #self.circle_handling(circle_list,idx)
+                                #for id in circle_list:
+                                #    received_from[id][idx] = [id]
+                                #    voting_power[id][idx] = 1
+
+                                ### Deletion Implementation
                                 voting_power[agent.id][idx] = 0 # voting power set to 0, no delegation
-                                # THIS MAY BE CHANGED FOR EXPERIMENTATIONS
+
                             else:
-                                #print(str(agent.id) + ' is delegating...')
-                                #print('best option = ' + str(agent.best_links[idx]))
-                                #print('received from = ' + str(received_from[agent.id][idx]))
-                                #print(agent.best_links[idx] in received_from[agent.id][idx])
                                 DELEGATE = True
                                 deleg = voting_power[agent.id][idx] # how much power is delegated
                                 voting_power[agent.id][idx] = 0     # own voting power set to 0
                                 voting_power[agent.best_links[idx]][idx] += deleg   # voting power of delegate is updated
 
                                 received_from[agent.best_links[idx]][idx].append(agent.id) # Add agent.id to best link received votes
-
-                                received_from[agent.best_links[idx]][idx].extend(received_from[agent.id][idx]) # Add receival elders
+                                received_from[agent.best_links[idx]][idx] = list(set().union(received_from[agent.best_links[idx]][idx],received_from[agent.id][idx])) # Add receival branch elders
+                                #received_from[agent.best_links[idx]][idx].extend(received_from[agent.id][idx])
         if DEBUG:
             print("DELEGATION done")
         return voting_power
+
+    def circle_handling(self, searchlist, idx):
+        best_links = {}
+        for agent in self.agents:
+            if agent.id in searchlist:
+                best_links[agent.id] = [agent.best_links[idx]]
+
+        def update(dictio):
+            for x in dictio:
+                dictio[x].append(dictio[dictio[x][-1]][0])
+
+        def check(dictio):
+            for x in dictio:
+                if x in dictio[x]:
+                    ### CYCLE DETECTED, all members of dictio[x] are in cycle
+                    return True
+            return False
+
+        while not check(best_links):
+            update(best_links)
+
+        for x in best_links:        # x is key for all agent.id in circle + branches
+            for y in best_links[x]: # y is key for all agent.id in circle
+                for agent in self.agents:
+                    if agent.id == y:
+                        agent.best_links[idx] = agent.id ## CHOICE, This could also be random or something else
+                break # Just do it once
