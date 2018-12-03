@@ -3,7 +3,7 @@ import os, xlsxwriter, csv, glob
 for csvfile in glob.glob("*.csv"):
 
     # Create a workbook and add a worksheet.
-    workbook = xlsxwriter.Workbook(csvfile+".xlsx", {'strings_to_numbers': True})
+    workbook = xlsxwriter.Workbook(str.replace(csvfile, ".csv", ".xlsx"), {'strings_to_numbers': True})
     worksheet = workbook.add_worksheet()
 
     r=1

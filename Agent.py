@@ -21,6 +21,7 @@ class Agent():
         self.id = id
         self.heuristic = heuristic
         self.links = []
+        self.cycle_links = []
         i = 0
         self.ability = np.zeros(len(world))
         self.error = np.zeros(len(world))

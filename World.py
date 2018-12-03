@@ -4,6 +4,7 @@ from copy import copy
 from Agent import Agent
 import numpy as np
 import networkx as nx
+from operator import itemgetter
 
 DEBUG = False
 
@@ -186,7 +187,7 @@ class World():
             print('starting delegation of votes')
 
         ### Delegation in seperate function!
-        voting_power = self.delegation()
+        voting_power = self.delegation(epsilon=epsilon)
 
         if DEBUG:
             print('Calculate actual voting > weighted mean')
@@ -294,19 +295,23 @@ class World():
                     if link == agent2.id:           # if other agent is a link
                         ab = agent2.ability
                         for i in range(len(ab)):
-                            ab[i] = uniform(max(self.min,ab[i]-epsilon), min(self.max, ab[i]+epsilon)) # First bound, then take uniform sample of interval
+                            #ab[i] = uniform(max(self.min,ab[i]-epsilon), min(self.max, ab[i]+epsilon)) # First bound, then take uniform sample of interval
 
-                            #ab[i] = gauss(ab[i], epsilon)  # Gauss
+                            ab[i] = gauss(ab[i], epsilon)  # Gauss
 
                             #ab[i] = tn.rvs(self.min-ab[i], self.max-ab[i], loc = ab[i], scale = epsilon) # truncated normal distribution
 
                             ab[i] = max(self.min,(min(ab[i], self.max))) # bound ability between min and max of landscape ## Extra check
                         x = np.vstack([x, ab])      # x is stacked ability
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
+            agent.best_link_abils = np.max(x, axis=0)
             #print(agent.best_links)
 
-    def delegation(self):
-        voting_power = np.ones([len(self.agents), self.subjects])  ## voting power of agent, 1 per agent/subject
+    def delegation(self, epsilon=0):
+        delegtype = 'cycle_subvote'
+
+
+        voting_power = np.ones([self.amount, self.subjects])  ## voting power of agent, 1 per agent/subject
         received_from = [[[x] for _ in range(self.subjects)] for x in range(self.amount)]
         DELEGATE = True
         while DELEGATE:
@@ -322,15 +327,32 @@ class World():
                                     print('Delegation cycle detected in landscape ' + str(
                                         idx) + ', handling number of votes: ' + str(len(received_from[agent.id][idx])))
 
-                                ### SELF-VOTE IMPLEMENTATION
-                                #circle_list = received_from[agent.id][idx].copy()
-                                #self.circle_handling(circle_list,idx)
-                                #for id in circle_list:
-                                #    received_from[id][idx] = [id]
-                                #    voting_power[id][idx] = 1
+                                if delegtype == "remove":
+                                    voting_power[agent.id][idx] = 0
+                                elif delegtype == "at_detect":
+                                    agent.best_links[idx] = agent.id
+                                elif delegtype == "break_cycle":
+                                    ## Extend Received list from current round!!
+                                    extend = True
+                                    while extend:
+                                        extend = False
+                                        for id in received_from[agent.id][idx]:
+                                            for item in received_from[id][idx]:
+                                                if item not in received_from[agent.id][idx]:
+                                                    extend = True
+                                                    received_from[agent.id][idx].append(item)
 
-                                ### Deletion Implementation
-                                voting_power[agent.id][idx] = 0 # voting power set to 0, no delegation
+                                    circle_list = received_from[agent.id][idx].copy()
+                                    self.circle_handling(circle_list,idx)
+                                    for id in circle_list:
+                                        received_from[id][idx] = [id]
+                                        voting_power[id][idx] = 1
+
+                                elif delegtype == "cycle_subvote":
+                                    cycle_list = received_from[agent.id][idx].copy()
+                                    self.cycle_decision(cycle_list=cycle_list, epsilon=epsilon, idx=idx)
+                                else:
+                                    quit("Delegation - cycle handling type Error")
 
                             else:
                                 DELEGATE = True
@@ -371,3 +393,38 @@ class World():
                     if agent.id == y:
                         agent.best_links[idx] = agent.id ## CHOICE, This could also be random or something else
                 break # Just do it once
+
+    def cycle_decision(self, cycle_list, epsilon, idx=0):
+        maj_dict = {}
+        for i in  cycle_list:
+            maj_dict[i] = 0
+
+        # All agents in cycle will define their delegate from that cycle AGAIN, so epsilon is redone!
+        ## MAYBE want to remember what epsilon was if same candidate appears. Because it shouldn't have changed
+        for agent in self.agents:
+            if agent.id in cycle_list:
+                agent.cycle_links = cycle_list
+                x = np.empty(0)  # x is ability of links
+                for link in agent.cycle_links:
+                    for agent2 in self.agents:
+                        if link == agent2.id:
+                            if link == agent.best_links[idx]:
+                                x = np.append(x, agent.best_link_abils[idx])
+                            else:
+                                ab = agent2.ability[idx]
+
+                                #ab = uniform(max(self.min, ab - epsilon), min(self.max, ab + epsilon))
+                                ab = gauss(ab, epsilon)
+                                #ab = tn.rvs(self.min - ab, self.max - ab, loc=ab, scale=epsilon)
+
+                                ab = max(self.min, (min(ab, self.max)))
+                                x = np.append(x, ab)
+                # argmax calcs best abilities in x, list comprehension gives the best_link ids
+                maj_dict[agent.cycle_links[np.argmax(x, axis=0)]] += 1
+                #agent.best_cycle_link = np.argmax(x, axis=0)
+                #maj_dict[agent.best_cycle_link]+=1
+
+        winner = max(maj_dict.items(), key=itemgetter(1))[0]
+        for agent in self.agents:
+            if agent.id == winner:
+                agent.best_links[idx] = agent.id
