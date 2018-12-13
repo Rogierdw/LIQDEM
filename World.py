@@ -5,6 +5,7 @@ from Agent import Agent
 import numpy as np
 import networkx as nx
 from operator import itemgetter
+import itertools
 
 DEBUG = False
 
@@ -174,7 +175,7 @@ class World():
 
         return (err, div)
 
-    def liquid(self, net_type, degree=20, epsilon=0):
+    def liquid(self, net_type, degree=15, epsilon=0):
         if self.PRINT:
             print('\nLIQUID DEMOCRACY')
             print('Network type = ' + net_type)
@@ -187,48 +188,58 @@ class World():
             print('starting delegation of votes')
 
         ### Delegation in seperate function!
-        voting_power = self.delegation(epsilon=epsilon)
+        delegtypes =  ["remove", "at_detect", "break_cycle", "cycle_subvote"]
+        save = np.empty([0,8])
 
-        if DEBUG:
-            print('Calculate actual voting > weighted mean')
-        ## Calculation of weighted voting power of agents
-        error = np.zeros(self.subjects)
-        diversity = np.zeros(self.subjects)
-        weighted_diversity = np.zeros(self.subjects)
-        votes_left = np.zeros(self.subjects)
+        i = 0
+        for delegtype in delegtypes:
+            (voting_power, cycle_results, cycle_theoretics, cycle_differences, cycle_diff_percentages) = self.delegation(epsilon=epsilon, delegtype=delegtype)
 
 
+            ### Just result calculation from here
+            if DEBUG:
+                print('Calculate actual voting > weighted mean')
+            ## Calculation of weighted voting power of agents
+            error = np.zeros(self.subjects)
+            diversity = np.zeros(self.subjects)
+            weighted_diversity = np.zeros(self.subjects)
+            votes_left = np.zeros(self.subjects)
 
-        for idx in range(self.subjects): # actual voting
-            div = []
-            wdiv = []
-            aggregation = 0
-            for agent in self.agents:
-                if voting_power[agent.id][idx] != 0:
-                    error[idx] += voting_power[agent.id][idx] * agent.error[idx]
-                    aggregation += voting_power[agent.id][idx]
+            for idx in range(self.subjects): # actual voting
+                div = []
+                wdiv = []
+                aggregation = 0
+                for agent in self.agents:
+                    if voting_power[agent.id][idx] != 0:
+                        error[idx] += voting_power[agent.id][idx] * agent.error[idx]
+                        aggregation += voting_power[agent.id][idx]
 
-                    div.append(agent)
-                    wdiv.extend([agent for i in range(int(voting_power[agent.id][idx]))])
+                        div.append(agent)
+                        wdiv.extend([agent for i in range(int(voting_power[agent.id][idx]))])
 
-            error[idx] = error[idx] / aggregation
+                error[idx] = error[idx] / aggregation
 
-            diversity[idx] = calc_population_diversity(div)
-            weighted_diversity[idx] = calc_population_diversity(wdiv)
+                diversity[idx] = calc_population_diversity(div)
+                weighted_diversity[idx] = calc_population_diversity(wdiv)
 
-            votes_left[idx] = float(aggregation)/self.amount*100
+                votes_left[idx] = float(aggregation)/self.amount
 
-        if self.PRINT:
-            print('Error percentages')
-            print(error)
-            print('Div_vote')
-            print(diversity)
-            print('WDiv_vote')
-            print(weighted_diversity)
-            print('Votes_left_%' )
-            print(votes_left)
+            if self.PRINT:
+                print('Error percentages')
+                print(error)
+                print('Div_vote')
+                print(diversity)
+                print('WDiv_vote')
+                print(weighted_diversity)
+                print('Votes_left_%' )
+                print(votes_left)
 
-        return (error, diversity, weighted_diversity, votes_left)
+            add = np.concatenate((error, diversity, weighted_diversity, votes_left))
+            add = np.append(add, [cycle_results, cycle_theoretics, cycle_differences, cycle_diff_percentages])
+
+            save = np.vstack([save, add])
+            #save.append([error.tolist(), diversity.tolist(), weighted_diversity.tolist(), votes_left.tolist(), cycle_results, cycle_theoretics, cycle_differences, cycle_diff_percentages])
+        return save
 
     def create_network(self, net_type, degree):
         #print('NetworkX creating network')
@@ -304,15 +315,23 @@ class World():
                             ab[i] = max(self.min,(min(ab[i], self.max))) # bound ability between min and max of landscape ## Extra check
                         x = np.vstack([x, ab])      # x is stacked ability
             agent.best_links = [agent.links[i] for i in np.argmax(x, axis=0)] # argmax calcs best abilities in x, list comprehension gives the best_link ids
+            agent.best_original_links = agent.best_links.copy() # Keep list, best_links may change and need to revert to this
             agent.best_link_abils = np.max(x, axis=0)
+            agent.best_original_link_abils = agent.best_link_abils.copy()
             #print(agent.best_links)
 
-    def delegation(self, epsilon=0):
-        delegtype = 'cycle_subvote'
+    def delegation(self, epsilon=0, delegtype="break_cycle"):
+        ### REVERT agents.best_links[idx] to original, may change below for different cycle handlers
 
+        for agent in self.agents:
+            agent.best_links = agent.best_original_links.copy()
 
         voting_power = np.ones([self.amount, self.subjects])  ## voting power of agent, 1 per agent/subject
         received_from = [[[x] for _ in range(self.subjects)] for x in range(self.amount)]
+        cycle_results = []
+        cycle_theoretics = []
+        cycle_differences = []
+        cycle_diff_percentages = []
         DELEGATE = True
         while DELEGATE:
             #print('NEW DELEGATION ROUND')
@@ -327,12 +346,15 @@ class World():
                                     print('Delegation cycle detected in landscape ' + str(
                                         idx) + ', handling number of votes: ' + str(len(received_from[agent.id][idx])))
 
-                                if delegtype == "remove":
-                                    voting_power[agent.id][idx] = 0
-                                elif delegtype == "at_detect":
+                                cycle_list = received_from[agent.id][idx].copy()  ## Cycle with branches
+                                actual_cycle = self.cycle_search(cycle_list, idx)  ## Only Cycle
+
+                                if delegtype is "at_detect":
                                     agent.best_links[idx] = agent.id
-                                elif delegtype == "break_cycle":
+
+                                if delegtype is "break_cycle":
                                     ## Extend Received list from current round!!
+                                    ### This is important because voting power is set to 1 per agent. And because order is random setting could be done at a wring moment. Therefor the received_from list is first extended completely for the current round. So when voting power is set to 1 no agents are devoid of their voting power completely. This is only needed in this 'break_cycle' handling.
                                     extend = True
                                     while extend:
                                         extend = False
@@ -342,17 +364,33 @@ class World():
                                                     extend = True
                                                     received_from[agent.id][idx].append(item)
 
-                                    circle_list = received_from[agent.id][idx].copy()
-                                    self.circle_handling(circle_list,idx)
-                                    for id in circle_list:
+                                    cycle_list = received_from[agent.id][idx].copy()  ## Cycle with branches
+
+                                    for id in cycle_list:
                                         received_from[id][idx] = [id]
                                         voting_power[id][idx] = 1
 
-                                elif delegtype == "cycle_subvote":
-                                    cycle_list = received_from[agent.id][idx].copy()
-                                    self.cycle_decision(cycle_list=cycle_list, epsilon=epsilon, idx=idx)
-                                else:
-                                    quit("Delegation - cycle handling type Error")
+                                    actual_cycle = self.cycle_search(cycle_list, idx)
+                                    for x in actual_cycle:
+                                        for agent in self.agents:
+                                            if agent.id == x:
+                                                agent.best_links[idx] = agent.id
+
+                                if delegtype is "cycle_subvote":
+                                    self.cycle_decision(cycle_list=actual_cycle, epsilon=epsilon, idx=idx) # Seperate Function
+
+                                if delegtype is "remove":
+                                    voting_power[agent.id][idx] = 0
+                                else:  # Cycle calculations done in all other cases
+                                    abil = self.cycle_abil(searchlist=actual_cycle, idx=idx)
+                                    theo = self.cycle_best_abil(searchlist=actual_cycle, idx=idx)
+                                    # theo = self.cycle_theoretic_abil(searchlist=actual_cycle, idx=idx)*100 # Posibility calc
+                                    diff = theo - abil
+                                    diffper = diff * 100 / self.max
+                                    cycle_results.append(abil)
+                                    cycle_theoretics.append(theo)
+                                    cycle_differences.append(diff)
+                                    cycle_diff_percentages.append(diffper)
 
                             else:
                                 DELEGATE = True
@@ -361,38 +399,19 @@ class World():
                                 voting_power[agent.best_links[idx]][idx] += deleg   # voting power of delegate is updated
 
                                 received_from[agent.best_links[idx]][idx].append(agent.id) # Add agent.id to best link received votes
-                                received_from[agent.best_links[idx]][idx] = list(set().union(received_from[agent.best_links[idx]][idx],received_from[agent.id][idx])) # Add receival branch elders
+                                # Add receival branch elders
+                                received_from[agent.best_links[idx]][idx] = list(set().union(received_from[agent.best_links[idx]][idx],received_from[agent.id][idx]))
                                 #received_from[agent.best_links[idx]][idx].extend(received_from[agent.id][idx])
+
+        cycle_results = None if len(cycle_results) is 0 else np.mean(cycle_results)
+        cycle_theoretics = None if len(cycle_theoretics) is 0 else np.mean(cycle_theoretics)
+        cycle_differences = None if len(cycle_differences) is 0 else np.mean(cycle_differences)
+        cycle_diff_percentages = None if len(cycle_diff_percentages) is 0 else np.mean(cycle_diff_percentages)
+
         if DEBUG:
             print("DELEGATION done")
-        return voting_power
 
-    def circle_handling(self, searchlist, idx):
-        best_links = {}
-        for agent in self.agents:
-            if agent.id in searchlist:
-                best_links[agent.id] = [agent.best_links[idx]]
-
-        def update(dictio):
-            for x in dictio:
-                dictio[x].append(dictio[dictio[x][-1]][0])
-
-        def check(dictio):
-            for x in dictio:
-                if x in dictio[x]:
-                    ### CYCLE DETECTED, all members of dictio[x] are in cycle
-                    return True
-            return False
-
-        while not check(best_links):
-            update(best_links)
-
-        for x in best_links:        # x is key for all agent.id in circle + branches
-            for y in best_links[x]: # y is key for all agent.id in circle
-                for agent in self.agents:
-                    if agent.id == y:
-                        agent.best_links[idx] = agent.id ## CHOICE, This could also be random or something else
-                break # Just do it once
+        return (voting_power, cycle_results, cycle_theoretics, cycle_differences, cycle_diff_percentages)
 
     def cycle_decision(self, cycle_list, epsilon, idx=0):
         maj_dict = {}
@@ -428,3 +447,66 @@ class World():
         for agent in self.agents:
             if agent.id == winner:
                 agent.best_links[idx] = agent.id
+
+    def cycle_search(self, searchlist, idx):
+        best_links = {}
+        for agent in self.agents:
+            if agent.id in searchlist:
+                best_links[agent.id] = [agent.best_links[idx]]
+
+        def update(dictio):
+            for x in dictio:
+                dictio[x].append(dictio[dictio[x][-1]][0])
+
+        def check(dictio):
+            for x in dictio:
+                if x in dictio[x]:
+                    ### CYCLE DETECTED, all members of dictio[x] are in cycle
+                    return True
+            return False
+
+        while not check(best_links):
+            update(best_links)
+
+        for x in best_links:        # x is key for all agent.id in circle + branches
+            if x in best_links[x]:
+                return best_links[x]
+
+    def cycle_abil(self, searchlist, idx):
+        abil = []
+        for agent in self.agents:
+            for id in searchlist:
+                if agent.id is id:
+                    if agent.best_links[idx] is agent.id:
+                        abil.append(agent.ability[idx])
+        return np.mean(abil)
+
+    def cycle_theoretic_abil(self, searchlist, idx):
+        maj = np.math.ceil((len(searchlist)+1)/2)
+        abil = np.zeros(0)  ## Which ability comes from which agent is not needed, just the abilities
+        for agent in self.agents:
+            for id in searchlist:
+                if agent.id is id:
+                    abil = np.append(abil,agent.ability[idx])
+        abil = abil/100
+        result = 0
+
+        # Calculations are done just with abil list
+        while(maj <= len(searchlist)): # take all majority options even the one where everyone is correct
+            pluss = list(itertools.combinations(abil,maj))
+            for plus in pluss:
+                plus = set(plus)
+                min = [1 - x for x in list(set(abil) - plus)]
+                plus = list(plus)
+                result += np.prod(plus + min)
+            maj +=1
+
+        return result
+
+    def cycle_best_abil(self, searchlist, idx):
+        abil = np.zeros(0)
+        for agent in self.agents:
+            for id in searchlist:
+                if agent.id is id:
+                    abil = np.append(abil,agent.ability[idx])
+        return np.max(abil)

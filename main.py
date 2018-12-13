@@ -4,8 +4,6 @@ from time import time
 from numpy import linspace, append
 
 SWEEP = True
-EPSWEEP = False
-TIME = False
 
 def old_main_1(subjects = 2, size = 1000, min = 1, max = 100, smoothing = 3):
     world = World(subjects, size, min, max, smoothing)
@@ -20,7 +18,7 @@ def old_main_1(subjects = 2, size = 1000, min = 1, max = 100, smoothing = 3):
     world.liquid('small')
     world.liquid('power')
 
-def sweep(subjects = 5, size = 2000, min = 1, max = 100, degree = 15, percentage = 75, epsilon = 0):
+def sweep(subjects = 1, size = 2000, min = 1, max = 100, degree = 15, percentage = 75, epsilon = 0):
     world = World(subjects, size, min, max, percentage, PRINT=False)
     # print(world.world)
 
@@ -28,22 +26,23 @@ def sweep(subjects = 5, size = 2000, min = 1, max = 100, degree = 15, percentage
     #(r1_e, r1_d) = world.representative_abil(degree)
     #(r2_e, r2_d) = world.representative_rand(degree)
 
-    (l1_e, l1_d, l1_wd, l1_v) = world.liquid('random', degree, epsilon)
-    (l2_e, l2_d, l2_wd, l2_v) = world.liquid('regular', degree, epsilon)
-    (l3_e, l3_d, l3_wd, l3_v) = world.liquid('ring', degree, epsilon)
-    (l4_e, l4_d, l4_wd, l4_v) = world.liquid('small', degree, epsilon)
-    (l5_e, l5_d, l5_wd, l5_v) = world.liquid('scale free', degree, epsilon)
+    l1_save = world.liquid('random', degree, epsilon)
+    print(l1_save)
+    quit()
+
+    l2_save = world.liquid('regular', degree, epsilon)
+    l3_save = world.liquid('ring', degree, epsilon)
+    l4_save = world.liquid('small', degree, epsilon)
+    l5_save = world.liquid('scale free', degree, epsilon)
     #(l_e, l_d, l_wd, l_v) = world.liquid('fully', epsilon=epsilon)
 
-    row2 = d_e.tolist() +  l1_e.tolist() + l2_e.tolist() + l3_e.tolist() + \
-           l4_e.tolist() + l5_e.tolist()# + l_e.tolist()r1_e.tolist() + r2_e.tolist() +
-    row3 = [d_d] + l1_d.tolist() + l2_d.tolist() + l3_d.tolist() + \
-           l4_d.tolist() + l5_d.tolist()# + l_d.tolist()[r1_d] + [r2_d] +
-    row4 = [d_d] + l1_wd.tolist() + l2_wd.tolist() + l3_wd.tolist() + \
-           l4_wd.tolist() + l5_wd.tolist()# + l_wd.tolist()[r1_d] + [r2_d] +
-    row5 = [100] + l1_v.tolist() + l2_v.tolist() + l3_v.tolist() + \
-           l4_v.tolist() + l5_v.tolist()# + l_v.tolist()[float(degree)/world.amount] + [float(degree)/world.amount] +
-    return (row2, row3, row4, row5)
+    err = d_e + l1_e + l2_e + l3_e +  l4_e + l5_e
+    div = [d_d] + l1_d + l2_d + l3_d + l4_d + l5_d
+    wdiv = [d_d] + l1_wd + l2_wd + l3_wd + l4_wd + l5_wd
+    vot = [100] + l1_v + l2_v + l3_v + l4_v + l5_v
+
+
+    return (err, div, wdiv, vot)
 
 def single(subjects = 5, size = 2000, min = 1, max = 100, degree = 15, percentage = 75, epsilon = 0):
     world = World(subjects, size, min, max, percentage, PRINT=True)
@@ -65,40 +64,38 @@ if __name__ == '__main__':
 
     subjects = 1
     degree = 15
-    percentages = [75]
-
-
-    e = linspace(0.1,1,10)
-    e2 = linspace(1.5,10,18)
-    epsilons = append(e,e2)
-
-    #epsilons = linspace(3.5,10,14)
     iterations = 100
-    name = 'Cycle_Decision'
+    name = 'Cycle_Investigation_complete'
 
-    initial_time = time()
-    old_time = time()
+    percentages = [50/13.2, 250/13.2, 500/13.2, 1000/13.2]
+
+    #e = linspace(0,1,11)
+    #e2 = linspace(1.5,10,18)
+    #epsilons = append(e,e2)
+
+    epsilons = linspace(0.5,5,10)
 
     if SWEEP:
         for percentage in percentages:
             for epsilon in epsilons:
-            # TO CSV!
-                with open(name + '_error' + str(subjects) + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
-                                  'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as f,\
+                ### FILESNAMES
+                with open(name + '_error_' + str(subjects) + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(int(percentage*13.2)) +
+                                  'pop_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as f,\
                         open(name + '_diversity_'+ str(subjects)
-                                + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
-                                  'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as g,\
+                                + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(int(percentage*13.2)) +
+                                  'pop_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as g,\
                         open(name + '_weight_diversity_' + str(subjects)
-                             + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
-                             'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as h, \
-                        open(name + '_votes_left_percent_' + str(subjects)
-                             + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
-                             'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as x:
+                             + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(int(percentage*13.2)) +
+                             'pop_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as h:#, \
+                        #open(name + '_votes_left_percent_' + str(subjects)
+                        #     + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(int(percentage*13.2)) +
+                        #     'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as x:
                     writer1 = csv.writer(f)
                     writer2 = csv.writer(g)
                     writer3 = csv.writer(h)
-                    writer4 = csv.writer(x)
+                    #writer4 = csv.writer(x)
 
+                    ### COLUMN HEADERS
                     writer1.writerow(['direct']*subjects +
                                     ['liq_random']*subjects + ['liq_regular']*subjects + ['liq_ring']*subjects +
                                     ['liq_small']*subjects + ['liq_scalefree']*subjects)# + ['liq_full']*subjects)['rep_ability']*subjects + ['rep_random']*subjects +
@@ -111,46 +108,18 @@ if __name__ == '__main__':
                                      ['liq_random'] * subjects + ['liq_regular'] * subjects + ['liq_ring'] * subjects +
                                      ['liq_small'] * subjects + ['liq_scalefree'] * subjects)# + ['liq_full'] * subjects)['rep_ability'] + ['rep_random'] +
 
-                    writer4.writerow(['direct'] +
-                                     ['liq_random'] * subjects + ['liq_regular'] * subjects + ['liq_ring'] * subjects +
-                                     ['liq_small'] * subjects + ['liq_scalefree'] * subjects)# + ['liq_full'] * subjects)['rep_ability'] + ['rep_random'] +
+                    #writer4.writerow(['direct'] +
+                    #                 ['liq_random'] * subjects + ['liq_regular'] * subjects + ['liq_ring'] * subjects +
+                    #                 ['liq_small'] * subjects + ['liq_scalefree'] * subjects)# + ['liq_full'] * subjects)['rep_ability'] + ['rep_random'] +
 
-
+                    ### ACTUAL ITERATIONS
                     for i in range(iterations):
                         print("Percentage: "+ str(percentage) + ', Epsilon: '+ str(epsilon) +', ITERATION: ' + str(i+1))
                         (err, div, wdiv, vot) = sweep(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilon)
                         writer1.writerow(err)
                         writer2.writerow(div)
                         writer3.writerow(wdiv)
-                        writer4.writerow(vot)
+                        #writer4.writerow(vot)
 
-                        if TIME:
-                            print('Time elapsed (s): ' + str(time() - initial_time))
-                            print('Time elapsed (m): ' + str((time() - initial_time) / 60))
-                            new_time = time()
-                            print('Iterations duration (s): ' + str(new_time - old_time))
-                            print('Iterations duration (m): ' + str((new_time - old_time) / 60))
-                            old_time = new_time
-    elif EPSWEEP:
-        for epsilon in epsilons:
-            with open('votes_left_percent_' + str(subjects) + 's_' + str(iterations) + 'i_' + str(degree) + 'd_' + str(percentage) +
-                              'p_' + str(epsilon) + 'e' + '.csv', 'w', newline='') as f:
-                writer4 = csv.writer(f)
-                writer4.writerow(['direct'] +
-                                 ['liq_random'] * subjects + ['liq_regular'] * subjects + ['liq_ring'] * subjects +
-                                 ['liq_small'] * subjects + ['liq_scalefree'] * subjects)# + ['liq_full'] * subjects)['rep_ability'] + ['rep_random'] +
-                for i in range(iterations):
-                    print('ROUND: '+ str(epsilon) +', ITERATION: ' + str(i+1))
-
-                    (err, div, wdiv, vot) = sweep(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilon)
-                    writer4.writerow(vot)
-
-                    if TIME:
-                        print('Time elapsed (s): ' + str(time() - initial_time))
-                        print('Time elapsed (m): ' + str((time() - initial_time) / 60))
-                        new_time = time()
-                        print('Iterations duration (s): ' + str(new_time - old_time))
-                        print('Iterations duration (m): ' + str((new_time - old_time) / 60))
-                        old_time = new_time
     else:
-        single(subjects=subjects, degree = degree, percentage = percentage, epsilon=epsilons[0])
+        single(subjects=subjects, degree = degree, percentage = percentages[-1], epsilon=epsilons[0])

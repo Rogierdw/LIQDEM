@@ -6,7 +6,7 @@ for csvfile in glob.glob("*.csv"):
     workbook = xlsxwriter.Workbook(str.replace(csvfile, ".csv", ".xlsx"), {'strings_to_numbers': True})
     worksheet = workbook.add_worksheet()
 
-    r=1
+    r=2
 
     with open(csvfile, 'r') as f:
         reader = csv.reader(f)
@@ -19,7 +19,9 @@ for csvfile in glob.glob("*.csv"):
 
 
     #worksheet.write(0,0, '=GEMIDDELDE(A3:A'+str(r)+')')
-    worksheet.write(0, 0, '=GEMIDDELDE(A3:A102)')
+    worksheet.write(0, 0, '=GEMIDDELDE(A4:A103)')
+    worksheet.write(1, 0, '=STDEV.P(A4:A103)')
+
 
     workbook.close()
     os.remove(csvfile)
